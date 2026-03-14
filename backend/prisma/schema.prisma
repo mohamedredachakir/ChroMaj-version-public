@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  ARTIST
+  USER
+}
+
+enum CategoryType {
+  ARTICLE
+  ARTWORK
+  EVENT
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         UserRole  @default(USER)
+  createdAt    DateTime  @default(now())
+  artist       Artist?
+  articles     Article[] @relation("UserArticles")
+  reviewedSubmissions ArtworkSubmission[] @relation("SubmissionReviewer")
+  comments     Comment[]
+  articleLikes ArticleLike[]
+}
+
+model Artist {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  bio       String
+  avatar    String?
+  website   String?
+  instagram String?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artworks  Artwork[]
+  articles  Article[] @relation("ArtistArticles")
+  submissions ArtworkSubmission[]
+}
+
+model Article {
+  id          String    @id @default(cuid())
+  title       String
+  content     String
+  authorId    String
+  artistId    String?
+  categoryId  String?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  author      User      @relation("UserArticles", fields: [authorId], references: [id], onDelete: Cascade)
+  artist      Artist?   @relation("ArtistArticles", fields: [artistId], references: [id], onDelete: SetNull)
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  comments    Comment[]
+  likes       ArticleLike[]
+}
+
+model Artwork {
+  id          String    @id @default(cuid())
+  artistId    String
+  categoryId  String?
+  title       String
+  image       String
+  description String
+  createdAt   DateTime  @default(now())
+  artist      Artist    @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  submission  ArtworkSubmission?
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  date        DateTime
+  city        String
+  location    String
+  image       String?
+  createdAt   DateTime @default(now())
+}
+
+model Category {
+  id       String      @id @default(cuid())
+  name     String      @unique
+  type     CategoryType
+  articles Article[]
+  artworks Artwork[]
+  submissions ArtworkSubmission[]
+}
+
+model ArtworkSubmission {
+  id               String           @id @default(cuid())
+  artistId         String
+  categoryId       String?
+  title            String
+  image            String
+  description      String
+  status           SubmissionStatus @default(PENDING)
+  reviewNote       String?
+  reviewedAt       DateTime?
+  reviewedById     String?
+  approvedArtworkId String?         @unique
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  artist           Artist           @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  category         Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  reviewedBy       User?            @relation("SubmissionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  approvedArtwork  Artwork?         @relation(fields: [approvedArtworkId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  articleId String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([articleId, createdAt])
+}
+
+model ArticleLike {
+  id        String   @id @default(cuid())
+  articleId String
+  userId    String
+  createdAt DateTime @default(now())
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, userId])
+  @@index([articleId])
+}
+
+model NewsletterSubscription {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
