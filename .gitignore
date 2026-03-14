@@ -11,3 +11,9 @@ backend/dist/
 .DS_Store
 .vite/
 frontend/.vite/
+
+# Internal project files — not for public distribution
+ProjectInfos/
+RUN_PROJECT_COMMANDS.md
+push_commits.sh
+todo
